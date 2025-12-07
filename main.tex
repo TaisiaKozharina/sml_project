@@ -84,6 +84,61 @@ and the metrics F1, accuracy, precision and recall were used to evaluate the fin
 
 \section{Methods}
 
+\subsection{Tree based method: Random Forest Classifier}
+A Random Forest Classifier builds an ensemble of $\mathit{B}$ decision trees, each trained on a bootstrapped dataset with randomized feature selection at each split. \\
+
+Given the dataset $\mathcal{T}$, $\tilde{\mathcal{T}}^{(b)}$ is one of the $\mathit{B}$ bootstrapped datasets in bagging, obtained by sampling from $\mathcal{T}$ with replacement. \\
+During the training process, when splitting a node, not all the $\mathit p$ variables are considered as splitting variables, but just $\mathit q$, with $q \leq p$. The splitting criterion is based on the fact that at any internal node the split is computed solving the optimisation problem:
+\begin{equation}
+    \arg \min\limits_{j,s} n_1Q_1 + n_2Q_2 
+\end{equation} 
+with $n_1$ and $n_2$ number of training data in the left and right nodes of the current split, $Q_1$ and $Q_2$ the costs derived from the prediction errors associated with these two nodes, and the variables $j$ and $s$ denoting the index of the splitting variable and the cutpoint. \\
+By considering the proportion of training observations in the $\mathit l$th region belonging to the $\mathit m$th class, defined as
+\begin{equation}
+    \hat \pi_{\mathit {lm}} = \frac 1{n_\mathit l}\sum_{i:\mathbf X_i \in \mathit{\mathbf{R}}_\mathit l} \mathbb I\{y_i = m\}
+\end{equation}
+we can generalize the splitting criterion $Q_\mathit l$ to the classification case in three different ways:
+\begin{enumerate}
+    \item Misclassification rate: \begin{equation} Q_\mathit l = 1-\max\limits_m \hat\pi_{\mathit lm} \end{equation}
+    \item Gini Index: \begin{equation} Q_\mathit l = \sum\limits_{m=1}^M \hat \pi_{\mathit lm}(1-\hat\pi_{\mathit lm})\end{equation}
+    \item Entropy Criterion:  \begin{equation} Q_\mathit l = -\sum\limits_{m=1}^M \hat\pi_{\mathit lm}\ln \hat\pi_{\mathit lm} \end{equation}
+\end{enumerate}
+Finally, the predictions are aggregated by assigning the class label through majority voting, defined as:
+\begin{equation}
+    \hat y = \text{mode}\{T^{(1)}(x),..., T^{(B)}(x)\}
+\end{equation}
+
+\subsection{Gradient Boosting}
+To train a gradient boosting classifier, first a training data $\mathcal T = \{\mathbf x_i, y_i\}_{i=1}^n$ and a step size multiplier $\gamma < 1$ are considered. 
+The algorithm initializes a decision tree node minimizing the loss function:
+\begin{equation}
+    f^{(0)}(x)=\arg \min\limits_c\sum_{i=1}^nL(y_i,c)
+\end{equation}
+For each tree $b=1,...,B$, it computes the negative gradient of the loss function, defined as:
+\begin{equation}
+    d_i^{(b)}=-\frac1n[\frac{\partial L(y_i,c)}{\partial c}]_{c=f^{(b-1)}(\mathbf x_i)}
+\end{equation}
+it learns a regression model $f^{(b)}(\mathbf x)$ from the input-output training data $\{\mathbf x_i, d_i^{(b)}\}_{i=1}^n$ and it computes the output value
+\begin{equation}
+    \alpha^{(b)}= \arg \min\limits_\alpha \sum_{i=1}^n L(y_i, f^{(b-1)}(\mathbf x_i)+\alpha f^{(b)}(\mathbf x_i))
+\end{equation}
+and it updates the boosted model:
+\begin{equation}
+    f^{(b)}(\mathbf x)=f^{(b-1)}(\mathbf x)+\gamma \alpha^{(b)} f^{(b)}
+\end{equation}
+
+Given the final $B$ weak classifier, the prediction based on the test data $x_*$ is computed as:
+\begin{equation}
+    \hat y_\text{boost}^{(B)}(\mathbf x_*) = \text sign \{f^{(B)(\mathbf x)}\}
+\end{equation}
+
+\subsubsection{Application of Random Forest and Gradient Boosting Classifiers}
+
+These two models were tuned with nested cross validations, using randomized grid search for hyperparameter optimization in the inner loop and cross validation in the outer loop using as hyperparameter the best candidate identified in the inner loop. This approach was adopted since randomized grid search allows wider exploration of the hyperparameter space, being less computationally expensive.\\
+The sampling techniques Smote, RandomOverSampler and RandomUnderSampler, and the dimensionality reduction techniques PCA and LDA were also included in the initial randomized grid search to further improve the model performance.
+Several nested cross validations were run restricting at each step the range of classifiers and techniques to find the best hyperparameter configuration and deal with issues like overfitting. 
+With this approach, Random Forest was immediately outperformed by Gradient Boosting, hence the model was not refined and its performance is not considered in the final comparison.  
+
 
 \subsection{kNN Classifier}
 \subsubsection{Mathematical Background}
@@ -112,63 +167,87 @@ The amount of specification and fitting to the training data can be adjust by ma
 \subsubsection{Adaptation to given problem}
 To find the optimal kNN classifier, all three distance messuares (Euclidean, Manhatten and Chebyshev) and \(k \in \{1, \dots, 50\}\) were considered.  5-fold cross-validation with grid search was performed. The 10 best combinations of distance metric and \(k\) were manually evalutated for overfitting by applying them to the separate test set. This was performed on both the normaliced and non-normalized dataset to explore differences in performance. As expected, the performance was better on the normalised dataset, but the difference was less significant then expected.
 
-\subsection{Tree based method: Random Forest Classifier}
-This section is based on the textbook \cite{smlbook}
 
-A Random Forest Classifier builds an ensemble of $\mathit{B}$ decision trees, each trained on a bootstrapped dataset with randomized feature selection at each split. \\
+\subsection{Logistic Regression}
 
-Given the dataset $\mathcal{T}$, $\tilde{\mathcal{T}}^{(b)}$ is one of the $\mathit{B}$ bootstrapped datasets in bagging, obtained by sampling from $\mathcal{T}$ with replacement. \\
-During the training process, when splitting a node, not all the $\mathit p$ variables are considered as splitting variables, but just $\mathit q$, with $q \leq p$. The splitting criterion is based on the fact that at any internal node the split is computed solving the optimisation problem:
+\subsubsection{Mathematical Background}
+
+Logistic regression is a statistical model for class probabilities. It can be viewed as adaptation of linear regression: since linear regression assumes linear relationship, the output variable $Y$ can take continuous value. Instead, in Logistic Regression we want to obtain a probability of a binary outcome, hence we map the output to a range $[0;1]$. 
+
+Considering a dataset $\mathcal T = \{\mathbf x_i, y_i\}_{i=1}^n$ 
+
 \begin{equation}
-    \arg \min\limits_{j,s} n_1Q_1 + n_2Q_2 
-\end{equation} 
-with $n_1$ and $n_2$ number of training data in the left and right nodes of the current split, $Q_1$ and $Q_2$ the costs derived from the prediction errors associated with these two nodes, and the variables $j$ and $s$ denoting the index of the splitting variable and the cutpoint. \\
-By considering the proportion of training observations in the $\mathit l$th region belonging to the $\mathit m$th class, defined as
-\begin{equation}
-    \hat \pi_{\mathit {lm}} = \frac 1{n_\mathit l}\sum_{i:\mathbf X_i \in \mathit{\mathbf{R}}_\mathit l} \mathbb I\{y_i = m\}
-\end{equation}
-we can generalize the splitting criterion $Q_\mathit l$ to the classification case in three different ways:
-\begin{enumerate}
-    \item Misclassification rate: \begin{equation} Q_\mathit l = 1-\max\limits_m \hat\pi_{\mathit lm} \end{equation}
-    \item Gini Index: \begin{equation} Q_\mathit l = \sum\limits_{m=1}^M \hat \pi_{\mathit lm}(1-\hat\pi_{\mathit lm})\end{equation}
-    \item Entropy Criterion:  \begin{equation} Q_\mathit l = -\sum\limits_{m=1}^M \hat\pi_{\mathit lm}\ln \hat\pi_{\mathit lm} \end{equation}
-\end{enumerate}
-Finally, the predictions are aggregated by assigning the class label through majority voting, defined as:
-\begin{equation}
-    \hat y = \text{mode}\{T^{(1)}(x),..., T^{(B)}(x)\}
+    \hat{y} = 
+\begin{cases}
+1, & \text{if } \sigma(w^\top x + b) \ge 0.5, \\
+0, & \text{otherwise}.
+\end{cases}
 \end{equation}
 
-\subsection{Gradient Boosting}
-This section is based on the textbook \cite{smlbook}
 
-To train a gradient boosting classifier, first a training data $\mathcal T = \{\mathbf x_i, y_i\}_{i=1}^n$ and a step size multiplier $\gamma < 1$ are considered. 
-The algorithm initializes a decision tree node minimizing the loss function:
+
+
+
 \begin{equation}
-    f^{(0)}(x)=\arg \min\limits_c\sum_{i=1}^nL(y_i,c)
-\end{equation}
-For each tree $b=1,...,B$, it computes the negative gradient of the loss function, defined as:
-\begin{equation}
-    d_i^{(b)}=-\frac1n[\frac{\partial L(y_i,c)}{\partial c}]_{c=f^{(b-1)}(\mathbf x_i)}
-\end{equation}
-it learns a regression model $f^{(b)}(\mathbf x)$ from the input-output training data $\{\mathbf x_i, d_i^{(b)}\}_{i=1}^n$ and it computes the output value
-\begin{equation}
-    \alpha^{(b)}= \arg \min\limits_\alpha \sum_{i=1}^n L(y_i, f^{(b-1)}(\mathbf x_i)+\alpha f^{(b)}(\mathbf x_i))
-\end{equation}
-and it updates the boosted model:
-\begin{equation}
-    f^{(b)}(\mathbf x)=f^{(b-1)}(\mathbf x)+\gamma \alpha^{(b)} f^{(b)}
+    L = -\sum_{i=1}^{n} w_{y_i} \left[\, y_i \log(p_i) + (1 - y_i)\log(1 - p_i) \,\right]
 \end{equation}
 
-Given the final $B$ weak classifier, the prediction based on the test data $x_*$ is computed as:
+
+Learning a Logistic Regression model using a Maximum Likelihood method can be expressed as solving the minimization of Logistic Loss:
 \begin{equation}
-    \hat y_\text{boost}^{(B)}(\mathbf x_*) = \text sign \{f^{(B)(\mathbf x)}\}
+    \theta = \arg \min\limits_{\theta} 1/n \sum_{i=1}^n ln(1+e^{-y_i\theta^Tx_i}
+)\end{equation}
+
+The logistic loss is defined by:
+\begin{equation}
+    L = -\sum_{i=1}^n [y_i log(p_i) + (1-y_i) log(1-p_i)] +\lambda R(w)
 \end{equation}
 
-\subsection{Application of Random Forest and Gradient Boosting Classifiers}
-These two models were tuned with nested cross validations, using randomized grid search for hyperparameter optimization in the inner loop and cross validation in the outer loop using as hyperparameter the best candidate identified in the inner loop. This approach was adopted since randomized grid search allows wider exploration of the hyperparameter space, being less computationally expensive.\\
-The sampling techniques Smote, RandomOverSampler and RandomUnderSampler, and the dimensionality reduction techniques PCA and LDA were also included in the initial randomized grid search to further improve the model performance.
-Several nested cross validations were run restricting at each step the range of classifiers and techniques to find the best hyperparameter configuration and deal with issues like overfitting. 
-With this approach, Random Forest was immediately outperformed by Gradient Boosting, hence the model was not refined and its performance is not considered in the final comparison.  
+\subsubsection{Adaptation to the current problem}
+
+The original dataset exhibits hight level of class unbalance in the output variable. In practice, this imbalance was mitigated by using the \verb|class_weight| parameter in logistic regression, which scales the loss contribution of each class proportionally to its inverse frequency. This forces the model to pay more attention to the minority class during optimization. Therefore the loss formulation is adjusted for unbalanced classes as following:
+\begin{equation}
+    L = -\sum_{i=1}^n w_{y_i} [y_i log(p_i) + (1-y_i) log(1-p_i)]
+\end{equation}
+
+where $w_i$ is the penalty coefficient for misclassification of class 0 and 1 respectively. 
+
+In the given dataset, the output class is heavily unbalanced with about 82\% samples belonging to class $0$
+
+
+\subsection{QLA LDA}
+\subsubsection{Mathematical Background}
+Lorem Ipsum
+
+\subsubsection{Application to the given problem}
+Lorem Ipsum
+
+\subsection{Model Evaluation and Best Model Selection}
+
+\begin{tabular}{c c | c c c c c c}
+\toprule
+    \textbf{Model} & \textbf{Data} & \textbf{Train acc.} & \textbf{Test acc.} & \textbf{Recall} & \textbf{Precision} & \textbf{F1 Score} & \textbf{ROC/AUC} \\
+    \midrule
+    Boosting & Base & 1 & 0.8950 & 0.7465 & 0.6883 & 0.7162 & 6\\
+    Boosting & Transf & 1 & 0.9000 & 0.6761 & 0.7385 & 0.7059 & 6\\
+    LDA & Base & 1 & 0.8300 & 0.4225 & 0.5263 & 0.4687 & 6\\
+    LDA & Transf & 1 & 0.8450 & 0.3521 & 0.6098 & 0.4464 & 6\\
+    QDA & Base & 1 & 0.8450 & 0.7606 & 0.5455 & 0.6353 & 6\\
+    QDA & Transf & 1 & 0.8100 & 0.5775 & 0.4713 & 0.5190 & 6\\
+    KNN & Base & 1 & 0.8600 & 0.4085 & 0.6744 & 0.5088 & 6\\
+    KNN & Transf & 1 & 0.8575 & 0.4507 & 0.6400 & 0.5289 & 6\\
+    Logistic Reg & Base & 1 & 0.8325 & 0.5634 & 0.5263 & 0.5442 & 6\\
+    Logistic Reg & Transf & 1 & 0.8475 & 0.5634 & 0.5714 & 0.5674 & 6\\
+    Dummy & Base & 1 & 0.8225 & 0 & 0 & 0 & 6\\
+    Dummy & Transf & 1 & 0.8225 & 0 & 0 & 0 & 6\\
+    \bottomrule
+    \label{tab:final_metrics}
+    \caption{All model metrics}
+\end{tabular}
+
+\subsection{Conclusion}
+
+
 
 % \subsection{Example of Figures}
 
