@@ -1,0 +1,314 @@
+\documentclass{article}
+
+
+\PassOptionsToPackage{square,comma,numbers,sort&compress}{natbib}
+
+% Keep this line uncomment in the first submission
+\usepackage[preprint]{neurips_2024} 
+
+%Uncomment this line for the second submission
+%\usepackage[final]{neurips_2024}
+
+
+
+\usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{xcolor}         % colors
+\usepackage{amsmath}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+\usepackage{listings}
+\lstdefinestyle{mystyle}{
+backgroundcolor=\color{backcolour},
+commentstyle=\color{codegreen},
+keywordstyle=\color{magenta},
+numberstyle=\tiny\color{codegray},
+stringstyle=\color{codepurple},
+basicstyle=\footnotesize\ttfamily,
+breakatwhitespace=false,
+breaklines=true, captionpos=b,
+keepspaces=true, numbers=left,
+numbersep=5pt, showspaces=false,
+showstringspaces=false,
+showtabs=false, tabsize=2,
+}
+\lstset{style=mystyle}
+
+\bibliographystyle{abbrvnat}
+
+\title{Do we need more bikes?\\
+Project in Statistical Machine Learning}
+
+\author{
+  David S.~Hippocampus\\
+  \AND
+  Anna J.~Petterson\\
+  \AND
+  Frederick B. ~Bromberg\\
+}
+\makeatletter
+\renewcommand{\@noticestring}{}
+\makeatother
+
+\begin{document}
+
+
+\maketitle
+\begin{abstract}
+This is an abstract to summarize the problem and your findings. Number of group member: \textbf{K}
+\end{abstract}
+
+
+\section{Introduction}
+\label{intro}
+% All headings should use lowercase letters, except for the first word and proper nouns. In the initial submission, include \verb+\usepackage{neurips_2024}+; for the final submission, use \verb+\usepackage[final]{neurips_2024}+ and comment out \verb+\usepackage{neurips_2024}+.
+
+\section{Data Analysis}
+
+\subsection{Data Preprocessing}
+
+\section{Methods}
+
+\subsection{Tree based method: Random Forest Classifier}
+A Random Forest Classifier builds an ensemble of $\mathit{B}$ decision trees, each trained on a bootstrapped dataset with randomized feature selection at each split. \\
+
+Given the dataset $\mathcal{T}$, $\tilde{\mathcal{T}}^{(b)}$ is one of the $\mathit{B}$ bootstrapped datasets in bagging, obtained by sampling from $\mathcal{T}$ with replacement. \\
+During the training process, when splitting a node, not all the $\mathit p$ variables are considered as splitting variables, but just $\mathit q$, with $q \leq p$. The splitting criterion is based on the fact that at any internal node the split is computed solving the optimisation problem:
+\begin{equation}
+    \arg \min\limits_{j,s} n_1Q_1 + n_2Q_2 
+\end{equation} 
+with $n_1$ and $n_2$ number of training data in the left and right nodes of the current split, $Q_1$ and $Q_2$ the costs derived from the prediction errors associated with these two nodes, and the variables $j$ and $s$ denoting the index of the splitting variable and the cutpoint. \\
+By considering the proportion of training observations in the $\mathit l$th region belonging to the $\mathit m$th class, defined as
+\begin{equation}
+    \hat \pi_{\mathit {lm}} = \frac 1{n_\mathit l}\sum_{i:\mathbf X_i \in \mathit{\mathbf{R}}_\mathit l} \mathbb I\{y_i = m\}
+\end{equation}
+we can generalize the splitting criterion $Q_\mathit l$ to the classification case in three different ways:
+\begin{enumerate}
+    \item Misclassification rate: \begin{equation} Q_\mathit l = 1-\max\limits_m \hat\pi_{\mathit lm} \end{equation}
+    \item Gini Index: \begin{equation} Q_\mathit l = \sum\limits_{m=1}^M \hat \pi_{\mathit lm}(1-\hat\pi_{\mathit lm})\end{equation}
+    \item Entropy Criterion:  \begin{equation} Q_\mathit l = -\sum\limits_{m=1}^M \hat\pi_{\mathit lm}\ln \hat\pi_{\mathit lm} \end{equation}
+\end{enumerate}
+Finally, the predictions are aggregated by assigning the class label through majority voting, defined as:
+\begin{equation}
+    \hat y = \text{mode}\{T^{(1)}(x),..., T^{(B)}(x)\}
+\end{equation}
+
+\subsection{Gradient Boosting}
+To train a gradient boosting classifier, first a training data $\mathcal T = \{\mathbf x_i, y_i\}_{i=1}^n$ and a step size multiplier $\gamma < 1$ are considered. 
+The algorithm initializes a decision tree node minimizing the loss function:
+\begin{equation}
+    f^{(0)}(x)=\arg \min\limits_c\sum_{i=1}^nL(y_i,c)
+\end{equation}
+For each tree $b=1,...,B$, it computes the negative gradient of the loss function, defined as:
+\begin{equation}
+    d_i^{(b)}=-\frac1n[\frac{\partial L(y_i,c)}{\partial c}]_{c=f^{(b-1)}(\mathbf x_i)}
+\end{equation}
+it learns a regression model $f^{(b)}(\mathbf x)$ from the input-output training data $\{\mathbf x_i, d_i^{(b)}\}_{i=1}^n$ and it computes the output value
+\begin{equation}
+    \alpha^{(b)}= \arg \min\limits_\alpha \sum_{i=1}^n L(y_i, f^{(b-1)}(\mathbf x_i)+\alpha f^{(b)}(\mathbf x_i))
+\end{equation}
+and it updates the boosted model:
+\begin{equation}
+    f^{(b)}(\mathbf x)=f^{(b-1)}(\mathbf x)+\gamma \alpha^{(b)} f^{(b)}
+\end{equation}
+
+Given the final $B$ weak classifier, the prediction based on the test data $x_*$ is computed as:
+\begin{equation}
+    \hat y_\text{boost}^{(B)}(\mathbf x_*) = \text sign \{f^{(B)(\mathbf x)}\}
+\end{equation}
+
+\subsubsection{Application of Random Forest and Gradient Boosting Classifiers}
+
+These two models were tuned with nested cross validations, using randomized grid search for hyperparameter optimization in the inner loop and cross validation in the outer loop using as hyperparameter the best candidate identified in the inner loop. This approach was adopted since randomized grid search allows wider exploration of the hyperparameter space, being less computationally expensive.\\
+The sampling techniques Smote, RandomOverSampler and RandomUnderSampler, and the dimensionality reduction techniques PCA and LDA were also included in the initial randomized grid search to further improve the model performance.
+Several nested cross validations were run restricting at each step the range of classifiers and techniques to find the best hyperparameter configuration and deal with issues like overfitting. 
+With this approach, Random Forest was immediately outperformed by Gradient Boosting, hence the model was not refined and its performance is not considered in the final comparison.  
+
+
+\subsection{kNN Classifier}
+\subsubsection{Mathematical Background}
+A kNN Classifier is a simple non-parametric classifier based on the intuition that inputs that lie close to each other should have similar outputs. This is computed by taking the new input and calculating the distance to any other datapoint within the training set. 
+
+This distance can be computed in different ways. One general family of distance calculations is the Minkowski distances
+\begin{equation}
+    d_p(x,y) = \left( \sum_{i=1}^n |x_i - y_i|^p \right)^{1/p}.
+\end{equation} 
+The most commonly used distance measures Euclidean, Manhatten and Chebyshev distance can be derived from this one by changing \(p\ge 1\):\cite{BelletHabrardSebban2015}
+\begin{equation}
+\begin{aligned}
+    d_{\text{Euclidean}}(x,y) &= \left( \sum_{i=1}^n (x_i - y_i)^2 \right)^{1/2}, \\
+    d_{\text{Manhattan}}(x,y) &= \sum_{i=1}^n |x_i - y_i|, \\
+    d_{\text{Chebyshev}}(x,y) &= \max_{i} |x_i - y_i|.
+\end{aligned}
+\end{equation}
+
+The amount of specification and fitting to the training data can be adjust by manipulating \(k\). \(k\) defines how many neighbours get considered. For classification problems the majority vote amongs those \(k\) neighbours \(\mathcal{N}_k(x) = \{ i \in \{1,\dots,n\} : x_i \text{ is among the } k \text{ closest points to } x \} 
+\) decides:
+\begin{equation}
+\hat{y} = \arg\max_{c \in \mathcal{C}} 
+    \sum_{i \in \mathcal{N}_k(x)} \mathbf{1}\{y_i = c\},
+\end{equation}
+
+\subsubsection{Adaptation to given problem}
+To find the optimal kNN classifier, all three distance messuares (Euclidean, Manhatten and Chebyshev) and \(k \in \{1, \dots, 50\}\) were considered.  5-fold cross-validation with grid search was performed. The 10 best combinations of distance metric and \(k\) were manually evalutated for overfitting by applying them to the separate test set. This was performed on both the normaliced and non-normalized dataset to explore differences in performance. As expected, the performance was better on the normalised dataset, but the difference was less significant then expected.
+
+
+\subsection{Logistic Regression}
+
+Logistic regression is a statistical model for class probabilities. It can be viewed as adaptation of linear regression: since linear regression assumes linear relationship, the output variable $Y$ can take continuous value. Instead, in Logistic Regression we want to obtain a probability of a binary outcome, hence we map the output to a range $[0;1]$. 
+
+\begin{equation}
+    y = \beta_0 + \sum_{i=1}^{n}\beta_ix_i
+\end{equation} 
+
+
+Learning a Logistic Regression model using a Maximum Likelihood method can be expressed as solving the minimization of Logistic Loss:
+\begin{equation}
+    \theta = \arg \min\limits_{\theta} 1/n \sum_{i=1}^n ln(1+e^{-y_i\theta^Tx_i}
+\end{equation}
+
+The logistic loss is defined by:
+\begin{equation}
+    L = -\sum_{i=1}^n [y_i log(p_i) + (1-y_i) log(1-p_i)] +\lambda R(w)
+\end{equation}
+
+And the loss is adjusted for unbalanced classes as:
+\begin{equation}
+    L = -\sum_{i=1}^n w_{y_i} [y_i log(p_i) + (1-y_i) log(1-p_i)]
+\end{equation}
+
+where $w_i$ is the penalty coefficient for misclassification of class 0 and 1 respectively. Hence, [HERE GOES THE REFERENCE TO THE MITIGATION OF UNBALANCED CLASSES]
+
+In the given dataset, the output class is heavily unbalanced with about 82\% samples belonging to class $0$
+
+
+\subsection{QLA LDA}
+\subsubsection{Mathematical Background}
+Lorem Ipsum
+
+\subsubsection{Application to the given problem}
+Lorem Ipsum
+
+
+\subsection{Model Evaluation and Best Model Selection}
+
+\begin{tabular}{c c | c c c c c c}
+\toprule
+    \textbf{Model} & \textbf{Data} & \textbf{Train acc.} & \textbf{Test acc.} & \textbf{Recall} & \textbf{Precision} & \textbf{F1 Score} & \textbf{ROC/AUC} \\
+    \midrule
+    Gradient Boosting & Base & 1 & 2 & 3 & 4 & 5 & 6\\
+    Gradient Boosting & Transf & 1 & 2 & 3 & 4 & 5 & 6\\
+    LDA & Base & 1 & 2 & 3 & 4 & 5 & 6\\
+    LDA & Transf & 1 & 2 & 3 & 4 & 5 & 6\\
+    QDA & Base & 1 & 2 & 3 & 4 & 5 & 6\\
+    QDA & Transf & 1 & 2 & 3 & 4 & 5 & 6\\
+    KNN & Base & 1 & 2 & 3 & 4 & 5 & 6\\
+    KNN & Transf & 1 & 2 & 3 & 4 & 5 & 6\\
+    Logistic Regression & Base & 1 & 2 & 3 & 4 & 5 & 6\\
+    Logistic Regression & Transf & 1 & 2 & 3 & 4 & 5 & 6\\
+    \bottomrule
+    \label{tab:final_metrics}
+    \caption{All model metrics}
+\end{tabular}
+                 
+
+\subsection{Conclusion}
+
+
+% \subsection{Example of Figures}
+
+
+% \begin{figure}[!ht]
+%   \centering
+%   \includegraphics[width=0.45\textwidth]{example_figure.pdf}
+%   \caption{Sample figure caption.}
+%   \label{fig:11}
+% \end{figure}
+
+% \begin{figure}[!h]
+%      \centering
+%      \begin{subfigure}{0.45\textwidth}
+%          \centering
+%          \includegraphics[width=\textwidth]{example_figure.pdf}
+%          \caption{Caption about (a)}
+%          \label{fig:21}
+%      \end{subfigure}
+%      \hfill
+%      \begin{subfigure}{0.45\textwidth}
+%          \centering
+%          \includegraphics[width=\textwidth]{example_figure.pdf}
+%          \caption{Caption about (b)}
+%          \label{fig:22}
+%      \end{subfigure}
+%         \caption{Sample two figures}
+%         \label{fig:two graphs}
+% \end{figure}
+
+% As shown in Figure~\ref{fig:11} and Figure~\ref{fig:21}...
+
+% \subsection{Example of tables}
+
+% \begin{table}[!ht]
+%   \caption{Sample table title}
+%   \label{sample-table}
+%   \centering
+%   \begin{tabular}{lll}
+%     \toprule
+%     \multicolumn{2}{c}{Part}                   \\
+%     \cmidrule(r){1-2}
+%     Name     & Description     & Size ($\mu$m) \\
+%     \midrule
+%     Dendrite & Input terminal  & $\sim$100     \\
+%     Axon     & Output terminal & $\sim$10      \\
+%     Soma     & Cell body       & up to $10^6$  \\
+%     \bottomrule
+%   \end{tabular}
+%   \label{tab:1}
+% \end{table}
+
+% According to Table~\ref{tab:1}, we found that...
+
+% \subsection{Example of maths}
+% Note that display math in bare TeX commands will not create correct line numbers for submission. Please use LaTeX (or AMSTeX) commands for unnumbered display math. (You really shouldn't be using \$\$ anyway; see \url{https://tex.stackexchange.com/questions/503/why-is-preferable-to} and \url{https://tex.stackexchange.com/questions/40492/what-are-the-differences-between-align-equation-and-displaymath} for more information.)
+% \begin{equation}\label{eq:1}
+%     \theta^* = (\textbf{X}^\top\textbf{X})^{-1}\textbf{X}^\top\textbf{Y}
+% \end{equation}
+
+% The equation \ref{eq:1} ...
+
+% \subsection{Example of citations}
+% Any citation style is acceptable as long as you maintain consistency throughout. References should be included in the file "ref.bib." You may use author-year or numeric citation styles. To cite works in the author-year format, use the command \verb+\citet+:
+
+% \begin{center} \citet{hasselmo1995dynamics} \end{center}
+
+% For numeric citations, use the command \verb+\cite+:
+
+% \begin{center} \cite{bower2012book} \end{center}
+
+% The \verb+natbib+ package will be automatically loaded for you.
+
+% For additional information, you can refer to the \verb+natbib+ documentation at:
+
+% \begin{center} \url{http://mirrors.ctan.org/macros/latex/contrib/natbib/natnotes.pdf} \end{center}
+
+\medskip
+\bibliography{ref}
+\appendix
+\section{Appendix}
+\newpage
+\lstinputlisting[language=python]{code.py}
+
+
+
+\end{document}
